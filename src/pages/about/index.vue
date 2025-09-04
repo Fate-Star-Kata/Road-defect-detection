@@ -1,172 +1,265 @@
 <template>
-  <div class="min-h-screen bg-base-100 text-base-content">
-    <!-- 页面标题 -->
-    <div class="bg-gradient-to-r from-primary/10 to-secondary/10 py-12">
-      <div class="container mx-auto px-4">
-        <RevealMotion :delay="0">
-          <h1 class="text-4xl md:text-5xl font-bold text-center mb-4">
-            模型信息
-          </h1>
-        </RevealMotion>
-        <RevealMotion :delay="0.1">
-          <p class="text-lg text-center opacity-70">
-            查看当前模型设置和性能统计数据
-          </p>
-        </RevealMotion>
-      </div>
-    </div>
+  <div class="min-h-screen bg-base-100 text-base-content overflow-hidden">
+    <!-- 背景装饰 -->
+    
+    <!-- 主容器 -->
+    <div class="relative z-10">
 
-    <!-- 主要内容区域 -->
-    <div class="container mx-auto px-4 py-8">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- 模型设置卡片 -->
-        <RevealMotion :delay="0.2">
-          <div class="card bg-base-200 shadow-lg">
-            <div class="card-body">
-              <h2 class="card-title text-2xl mb-6 flex items-center">
-                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-                模型设置
-              </h2>
-              
-              <div v-if="modelSettingsLoading" class="flex justify-center py-8">
-                <span class="loading loading-spinner loading-lg"></span>
+
+      <!-- 仪表盘主体 -->
+      <div class="container mx-auto px-6 py-8">
+        <!-- 核心指标圆环 -->
+        <RevealMotion :delay="0.1">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold mb-8 text-base-content">
+              模型性能概览
+            </h2>
+            
+            <div v-if="performanceLoading || modelSettingsLoading" class="flex justify-center py-16">
+              <div class="relative">
+                <div class="loading loading-spinner loading-lg text-primary"></div>
+                <div class="absolute inset-0 flex items-center justify-center mt-16">
+                  <span class="text-sm font-medium text-base-content/70">加载中...</span>
+                </div>
               </div>
-              
-              <div v-else-if="modelSettings" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="stat bg-base-100 rounded-lg">
-                    <div class="stat-title">置信度阈值</div>
-                    <div class="stat-value text-primary">{{ modelSettings.confidence_threshold }}</div>
-                  </div>
-                  <div class="stat bg-base-100 rounded-lg">
-                    <div class="stat-title">输入尺寸</div>
-                    <div class="stat-value text-secondary">{{ modelSettings.input_size }}</div>
+            </div>
+            
+            <div v-else-if="performanceStats && modelSettings" class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <!-- 成功率圆环 -->
+              <div class="relative">
+                <div class="w-40 h-40 mx-auto relative">
+                  <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" class="text-base-300"/>
+                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" 
+                            class="text-success" stroke-linecap="round"
+                            :stroke-dasharray="`${performanceStats.overall_stats.overall_success_rate * 2.51} 251`"/>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-3xl font-bold text-success">{{ performanceStats.overall_stats.overall_success_rate.toFixed(1) }}%</span>
+                    <span class="text-sm text-base-content/70">成功率</span>
                   </div>
                 </div>
+              </div>
+              
+              <!-- 置信度圆环 -->
+              <div class="relative">
+                <div class="w-40 h-40 mx-auto relative">
+                  <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" class="text-base-300"/>
+                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" 
+                            class="text-info" stroke-linecap="round"
+                            :stroke-dasharray="`${performanceStats.overall_stats.overall_avg_confidence * 251} 251`"/>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-3xl font-bold text-info">{{ (performanceStats.overall_stats.overall_avg_confidence * 100).toFixed(1) }}%</span>
+                    <span class="text-sm text-base-content/70">平均置信度</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 缺陷比例圆环 -->
+              <div class="relative">
+                <div class="w-40 h-40 mx-auto relative">
+                  <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" class="text-base-300"/>
+                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" 
+                            class="text-warning" stroke-linecap="round"
+                            :stroke-dasharray="`${performanceStats.overall_stats.overall_avg_tumor_ratio * 251} 251`"/>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-3xl font-bold text-warning">{{ (performanceStats.overall_stats.overall_avg_tumor_ratio * 100).toFixed(1) }}%</span>
+                    <span class="text-sm text-base-content/70">平均缺陷比例</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </RevealMotion>
+
+        <!-- 模型配置时间线 -->
+        <RevealMotion :delay="0.2">
+          <div class="mb-12">
+            <h3 class="text-2xl font-bold mb-8 text-center text-base-content">模型配置信息</h3>
+            
+            <div v-if="modelSettingsLoading" class="flex justify-center py-8">
+              <div class="loading loading-spinner loading-md text-primary"></div>
+            </div>
+            
+            <div v-else-if="modelSettings" class="max-w-4xl mx-auto">
+              <div class="relative">
+                <!-- 时间线 -->
+                <div class="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-base-300 rounded-full"></div>
                 
-                <div class="space-y-3">
-                  <div class="flex justify-between items-center p-3 bg-base-100 rounded-lg">
-                    <span class="font-medium">模型状态</span>
-                    <div class="badge" :class="modelSettings.is_active ? 'badge-success' : 'badge-error'">
-                      {{ modelSettings.is_active ? '激活' : '未激活' }}
+                <!-- 配置项 -->
+                <div class="space-y-12">
+                  <!-- 置信度阈值 -->
+                  <div class="flex items-center">
+                    <div class="w-1/2 pr-8 text-right">
+                      <div class="card bg-base-100 shadow-md border border-base-300">
+                        <div class="card-body">
+                          <h4 class="card-title text-base-content">置信度阈值</h4>
+                          <div class="text-3xl font-bold text-info">{{ modelSettings.confidence_threshold }}</div>
+                          <p class="text-sm text-base-content/70 mt-2">模型预测的最低置信度要求</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="w-8 h-8 bg-info rounded-full border-4 border-base-100 flex items-center justify-center relative z-10 shadow-sm">
+                      <div class="w-3 h-3 bg-base-100 rounded-full"></div>
+                    </div>
+                    <div class="w-1/2 pl-8"></div>
+                  </div>
+                  
+                  <!-- 输入尺寸 -->
+                  <div class="flex items-center">
+                    <div class="w-1/2 pr-8"></div>
+                    <div class="w-8 h-8 bg-secondary rounded-full border-4 border-base-100 flex items-center justify-center relative z-10 shadow-sm">
+                      <div class="w-3 h-3 bg-base-100 rounded-full"></div>
+                    </div>
+                    <div class="w-1/2 pl-8">
+                      <div class="card bg-base-100 shadow-md border border-base-300">
+                        <div class="card-body">
+                          <h4 class="card-title text-base-content">输入尺寸</h4>
+                          <div class="text-3xl font-bold text-secondary">{{ modelSettings.input_size }}</div>
+                          <p class="text-sm text-base-content/70 mt-2">图像输入的标准尺寸</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
-                  <div class="flex justify-between items-center p-3 bg-base-100 rounded-lg">
-                    <span class="font-medium">创建时间</span>
-                    <span class="text-sm opacity-70">{{ formatDateTime(modelSettings.created_time) }}</span>
-                  </div>
-                  
-                  <div class="flex justify-between items-center p-3 bg-base-100 rounded-lg">
-                    <span class="font-medium">更新时间</span>
-                    <span class="text-sm opacity-70">{{ formatDateTime(modelSettings.updated_time) }}</span>
+                  <!-- 模型状态 -->
+                  <div class="flex items-center">
+                    <div class="w-1/2 pr-8 text-right">
+                      <div class="card bg-base-100 shadow-md border border-base-300">
+                        <div class="card-body">
+                          <h4 class="card-title text-base-content">模型状态</h4>
+                          <div class="flex items-center justify-end space-x-2">
+                            <div class="w-3 h-3 rounded-full" :class="modelSettings.is_active ? 'bg-success animate-pulse' : 'bg-error'"></div>
+                            <span class="text-xl font-bold" :class="modelSettings.is_active ? 'text-success' : 'text-error'">
+                              {{ modelSettings.is_active ? '激活' : '未激活' }}
+                            </span>
+                          </div>
+                          <p class="text-sm text-base-content/70 mt-2">当前模型运行状态</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="w-8 h-8 rounded-full border-4 border-base-100 flex items-center justify-center relative z-10 shadow-sm"
+                         :class="modelSettings.is_active ? 'bg-success' : 'bg-error'">
+                      <div class="w-3 h-3 bg-base-100 rounded-full"></div>
+                    </div>
+                    <div class="w-1/2 pl-8"></div>
                   </div>
                 </div>
-              </div>
-              
-              <div v-else class="text-center py-8">
-                <div class="text-error">加载模型设置失败</div>
-                <button class="btn btn-outline btn-sm mt-2" @click="loadModelSettings">
-                  重新加载
-                </button>
               </div>
             </div>
           </div>
         </RevealMotion>
 
-        <!-- 性能统计卡片 -->
+        <!-- 性能趋势图表区域 -->
         <RevealMotion :delay="0.3">
-          <div class="card bg-base-200 shadow-lg">
-            <div class="card-body">
-              <h2 class="card-title text-2xl mb-6 flex items-center">
-                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                </svg>
-                性能统计
-                <select class="select select-sm select-bordered ml-auto" v-model="selectedDays" @change="loadPerformanceStats">
-                  <option value="7">最近7天</option>
-                  <option value="30">最近30天</option>
-                  <option value="90">最近90天</option>
-                </select>
-              </h2>
-              
-              <div v-if="performanceLoading" class="flex justify-center py-8">
-                <span class="loading loading-spinner loading-lg"></span>
-              </div>
-              
-              <div v-else-if="performanceStats" class="space-y-6">
-                <!-- 总体统计 -->
-                <div class="grid grid-cols-2 gap-4">
-                  <div class="stat bg-base-100 rounded-lg">
-                    <div class="stat-title">总分割次数</div>
+          <div class="mb-12">
+            <div class="flex items-center justify-between mb-8">
+              <h3 class="text-2xl font-bold text-base-content">性能趋势分析</h3>
+              <select class="select select-bordered bg-base-100 border-base-300 text-base-content" v-model="selectedDays" @change="loadPerformanceStats">
+                <option value="7">最近7天</option>
+                <option value="30">最近30天</option>
+                <option value="90">最近90天</option>
+              </select>
+            </div>
+            
+            <div v-if="performanceLoading" class="flex justify-center py-16">
+              <div class="loading loading-spinner loading-md text-primary"></div>
+            </div>
+            
+            <div v-else-if="performanceStats" class="card bg-base-100 shadow-lg border border-base-300">
+              <div class="card-body">
+              <!-- 统计卡片网格 -->
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="stats shadow border border-base-300">
+                  <div class="stat">
+                    <div class="stat-title text-base-content/70">总检测次数</div>
                     <div class="stat-value text-primary">{{ performanceStats.overall_stats.total_segmentations }}</div>
                   </div>
-                  <div class="stat bg-base-100 rounded-lg">
-                    <div class="stat-title">成功率</div>
+                </div>
+                <div class="stats shadow border border-base-300">
+                  <div class="stat">
+                    <div class="stat-title text-base-content/70">成功率</div>
                     <div class="stat-value text-success">{{ performanceStats.overall_stats.overall_success_rate.toFixed(1) }}%</div>
                   </div>
-                  <div class="stat bg-base-100 rounded-lg">
-                    <div class="stat-title">平均置信度</div>
+                </div>
+                <div class="stats shadow border border-base-300">
+                  <div class="stat">
+                    <div class="stat-title text-base-content/70">平均置信度</div>
                     <div class="stat-value text-info">{{ performanceStats.overall_stats.overall_avg_confidence.toFixed(3) }}</div>
                   </div>
-                  <div class="stat bg-base-100 rounded-lg">
-                    <div class="stat-title">平均肿瘤比例</div>
+                </div>
+                <div class="stats shadow border border-base-300">
+                  <div class="stat">
+                    <div class="stat-title text-base-content/70">平均缺陷比例</div>
                     <div class="stat-value text-warning">{{ (performanceStats.overall_stats.overall_avg_tumor_ratio * 100).toFixed(1) }}%</div>
                   </div>
                 </div>
-                
-                <!-- 每日统计表格 -->
-                <div class="overflow-x-auto">
-                  <table class="table table-zebra w-full">
-                    <thead>
-                      <tr>
-                        <th>日期</th>
-                        <th>分割次数</th>
-                        <th>成功次数</th>
-                        <th>成功率</th>
-                        <th>平均置信度</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="stat in performanceStats.daily_stats" :key="stat.date">
-                        <td>{{ formatDate(stat.date) }}</td>
-                        <td>{{ stat.total_segmentations }}</td>
-                        <td>{{ stat.successful_segmentations }}</td>
-                        <td>
-                          <div class="badge" :class="stat.success_rate === 100 ? 'badge-success' : 'badge-warning'">
-                            {{ stat.success_rate.toFixed(1) }}%
-                          </div>
-                        </td>
-                        <td>{{ stat.avg_confidence.toFixed(3) }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+              </div>
+              
+              <!-- 每日数据列表 -->
+              <div class="space-y-3">
+                <h4 class="text-lg font-semibold mb-4 text-base-content">每日性能详情</h4>
+                <div class="max-h-64 overflow-y-auto space-y-2">
+                  <div v-for="stat in performanceStats.daily_stats" :key="stat.date" 
+                       class="flex items-center justify-between p-4 bg-base-200 rounded-xl border border-base-300 hover:bg-base-300 transition-colors">
+                    <div class="flex items-center space-x-4">
+                      <div class="avatar placeholder">
+                        <div class="bg-neutral text-neutral-content rounded-xl w-12">
+                          <span class="text-sm font-bold">{{ formatDate(stat.date).split('/')[2] }}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div class="font-medium text-base-content">{{ formatDate(stat.date) }}</div>
+                        <div class="text-sm text-base-content/70">{{ stat.total_segmentations }} 次检测</div>
+                      </div>
+                    </div>
+                    <div class="flex items-center space-x-6">
+                      <div class="text-center">
+                        <div class="text-lg font-bold text-success">{{ stat.success_rate.toFixed(1) }}%</div>
+                        <div class="text-xs text-base-content/70">成功率</div>
+                      </div>
+                      <div class="text-center">
+                        <div class="text-lg font-bold text-info">{{ stat.avg_confidence.toFixed(3) }}</div>
+                        <div class="text-xs text-base-content/70">置信度</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              <div v-else class="text-center py-8">
-                <div class="text-error">加载性能统计失败</div>
-                <button class="btn btn-outline btn-sm mt-2" @click="loadPerformanceStats">
-                  重新加载
-                </button>
+              <!-- 时间范围信息 -->
+                <div class="text-center mt-6 pt-6 border-t border-base-300">
+                  <p class="text-sm text-base-content/70">
+                    统计时间范围：{{ formatDate(performanceStats.date_range.start_date) }} 至 {{ formatDate(performanceStats.date_range.end_date) }}
+                    （{{ performanceStats.date_range.days }} 天）
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </RevealMotion>
+
+        <!-- 模型时间信息 -->
+        <RevealMotion :delay="0.4">
+          <div v-if="modelSettings" class="bg-white/5 backdrop-blur-md rounded-3xl p-8 border border-white/10">
+            <h3 class="text-xl font-bold mb-6 text-center">模型时间信息</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="text-center p-6 bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-2xl border border-indigo-400/30">
+                <div class="text-lg font-semibold text-indigo-400 mb-2">创建时间</div>
+                <div class="text-sm text-white/70">{{ formatDateTime(modelSettings.created_time) }}</div>
+              </div>
+              <div class="text-center p-6 bg-gradient-to-br from-teal-500/20 to-teal-600/20 rounded-2xl border border-teal-400/30">
+                <div class="text-lg font-semibold text-teal-400 mb-2">更新时间</div>
+                <div class="text-sm text-white/70">{{ formatDateTime(modelSettings.updated_time) }}</div>
               </div>
             </div>
           </div>
         </RevealMotion>
       </div>
-      
-      <!-- 统计时间范围信息 -->
-      <RevealMotion :delay="0.4">
-        <div v-if="performanceStats" class="text-center mt-8 opacity-70">
-          <p class="text-sm">
-            统计时间范围：{{ formatDate(performanceStats.date_range.start_date) }} 至 {{ formatDate(performanceStats.date_range.end_date) }}
-            （{{ performanceStats.date_range.days }} 天）
-          </p>
-        </div>
-      </RevealMotion>
     </div>
   </div>
 </template>
@@ -234,6 +327,56 @@ const performanceStats = ref<PerformanceResponse | null>(null)
 const performanceLoading = ref(false)
 const selectedDays = ref(7)
 
+// 时间范围选项
+const timeRangeOptions = [
+  { value: 7, label: '最近7天' },
+  { value: 30, label: '最近30天' },
+  { value: 90, label: '最近90天' }
+]
+
+// 计算圆环进度条的路径
+const getCirclePath = (percentage: number) => {
+  const radius = 40
+  const circumference = 2 * Math.PI * radius
+  const strokeDasharray = circumference
+  const strokeDashoffset = circumference - (percentage / 100) * circumference
+  return { strokeDasharray, strokeDashoffset }
+}
+
+// 计算成功率
+const successRate = computed(() => {
+  if (!performanceStats.value?.overall_stats?.total_segmentations) return 0
+  return performanceStats.value.overall_stats.overall_success_rate
+})
+
+// 计算平均置信度
+const avgConfidence = computed(() => {
+  if (!performanceStats.value?.overall_stats) return 0
+  return performanceStats.value.overall_stats.overall_avg_confidence
+})
+
+// 计算平均缺陷比例
+const avgDefectRatio = computed(() => {
+  if (!performanceStats.value?.overall_stats) return 0
+  return performanceStats.value.overall_stats.overall_avg_tumor_ratio
+})
+
+// 模型状态颜色
+const getStatusColor = (isActive: boolean) => {
+  return isActive ? 'text-green-400' : 'text-red-400'
+}
+
+// 模型状态文本
+const getStatusText = (isActive: boolean) => {
+  return isActive ? '运行中' : '已停用'
+}
+
+// 格式化数字
+const formatNumber = (value: number | null | undefined) => {
+  if (value === null || value === undefined) return '0'
+  return value.toLocaleString()
+}
+
 // 加载模型设置
 const loadModelSettings = async () => {
   try {
@@ -291,6 +434,11 @@ const formatDate = (dateString: string) => {
   })
 }
 
+// 时间范围改变处理
+const handleTimeRangeChange = () => {
+  loadPerformanceStats()
+}
+
 // 组件挂载时加载数据
 onMounted(() => {
   loadModelSettings()
@@ -300,19 +448,89 @@ onMounted(() => {
 
 <style scoped>
 /* 自定义样式 */
-.stat {
-  @apply p-4;
+.loading {
+  @apply inline-block animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite];
 }
 
-.stat-title {
-  @apply text-sm opacity-70 mb-1;
+.loading-spinner {
+  @apply border-2;
 }
 
-.stat-value {
-  @apply text-2xl font-bold;
+.loading-lg {
+  @apply h-8 w-8;
 }
 
-.table th {
-  @apply bg-base-300;
+.select {
+  @apply inline-flex h-12 min-h-12 flex-shrink-0 cursor-pointer select-none flex-wrap items-center justify-between rounded-btn border border-neutral bg-base-100 px-4 text-sm leading-loose transition duration-200 ease-in-out;
+}
+
+.select-bordered {
+  @apply border-base-content/20;
+}
+
+/* 圆环进度条动画 */
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.progress-circle {
+  animation: dash 2s ease-in-out;
+}
+
+/* 玻璃拟态效果 */
+.glass {
+  backdrop-filter: blur(16px) saturate(180%);
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 悬停效果 */
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* 渐变文字 */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 自定义滚动条 - 适配主题 */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: hsl(var(--b2));
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: hsl(var(--bc) / 0.3);
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--bc) / 0.5);
 }
 </style>

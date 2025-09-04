@@ -1,48 +1,48 @@
 <template>
-  <div class="h-[90vh] bg-base-100 text-base-content flex flex-col overflow-hidden">
-    <!-- 主要内容区域 -->
-    <div class="flex-1 flex flex-col justify-center items-center px-4">
-      <!-- 标题区域 -->
-      <div class="text-center space-y-6 mb-8">
-        <RevealMotion :delay="0">
-          <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight">
-            肝肿瘤分割系统
-          </h1>
-        </RevealMotion>
-
-        <RevealMotion :delay="0.1">
-          <p class="text-lg md:text-xl opacity-70">
-            基于深度学习的肝脏肿瘤智能分割与诊断辅助平台
-          </p>
-        </RevealMotion>
-
-        <RevealMotion :delay="0.2">
-          <div class="flex items-center justify-center gap-3 pt-2">
-            <a class="btn btn-primary rounded-full px-6">立即使用</a>
-            <a class="btn btn-outline rounded-full px-6">了解更多</a>
+  <div class="bg-base-100 text-base-content flex flex-col overflow-hidden">
+    <!-- 主内容区 -->
+    <div class="flex-1">
+      <!-- 内容区域 -->
+      <main class="flex-1 overflow-auto p-6">
+        <div class="space-y-8">
+          <!-- 欢迎区域 -->
+          <div class="bg-base-200 p-8 rounded-lg shadow-md text-center">
+            <h2 class="text-3xl font-bold mb-4">欢迎使用道路缺陷检测系统</h2>
+            <p class="text-lg opacity-80">一站式智能检测与分析平台，助您高效管理道路养护。</p>
+            <div class="mt-6">
+              <button class="btn btn-primary btn-lg">立即开始检测</button>
+            </div>
           </div>
-        </RevealMotion>
-      </div>
 
-      <!-- 功能亮点：紧凑布局 -->
-      <div class="max-w-4xl w-full">
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <RevealMotion v-for="(f, i) in features" :key="i" :delay="i * 0.08">
-            <div class="card bg-base-200 shadow-sm hover:shadow-md transition rounded-xl">
-              <div class="card-body p-4">
-                <h3 class="card-title text-sm">{{ f.title }}</h3>
-                <p class="opacity-70 text-xs">{{ f.desc }}</p>
+          <!-- 核心功能概览 -->
+          <div>
+            <h3 class="text-2xl font-semibold mb-4">核心功能</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div v-for="(f, i) in features" :key="i" class="card bg-base-200 shadow-sm">
+                <div class="card-body">
+                  <h4 class="card-title">{{ f.title }}</h4>
+                  <p class="text-sm opacity-70">{{ f.desc }}</p>
+                </div>
               </div>
             </div>
-          </RevealMotion>
-        </div>
-      </div>
-    </div>
+          </div>
 
-    <!-- 页脚 -->
-    <footer class="border-t border-base-200 py-4 text-center text-sm opacity-70">
-      {{ footerText }}
-    </footer>
+          <!-- 快速入口 -->
+          <div>
+            <h3 class="text-2xl font-semibold mb-4">快速入口</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <router-link to="/history" class="btn btn-outline btn-lg">查看检测记录</router-link>
+              <router-link to="/about" class="btn btn-outline btn-lg">关于本系统</router-link>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <!-- 页脚 -->
+      <footer class="bg-base-100 border-t border-base-300 p-4 text-center text-sm opacity-70">
+        {{ footerText }}
+      </footer>
+    </div>
   </div>
 </template>
 
@@ -53,74 +53,18 @@
  * - RevealMotion 组件内部用 IntersectionObserver 监听进入视口
  * - 初始：opacity 0 + y 16；进入：opacity 1 + y 0
  */
-import { h, defineComponent, onMounted, onBeforeUnmount, ref, computed } from "vue";
-import { Motion } from "motion-v";
+import { ref, computed } from "vue";
 
 const footerText = import.meta.env.VITE_APP_FOOTER || "版权所有 © 2025 HZSYSTEM";
 
-type RevealProps = { delay?: number };
-const RevealMotion = defineComponent<RevealProps>({
-  name: "RevealMotion",
-  props: { delay: { type: Number, default: 0 } },
-  setup(props, { slots }) {
-    const el = ref<HTMLElement | null>(null);
-    const inView = ref(false);
-    let io: IntersectionObserver | null = null;
-
-    // 使用 computed 来确保响应式更新
-    const animateProps = computed(() => {
-      return inView.value
-        ? { opacity: 1, y: 0, transition: { duration: 0.6, delay: props.delay } }
-        : { opacity: 0, y: 16 };
-    });
-
-    onMounted(() => {
-      io = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((e) => {
-            if (e.isIntersecting) {
-              inView.value = true;
-              // 只动画一次，注释掉下一行可反复触发
-              io?.unobserve(e.target);
-            }
-          });
-        },
-        { threshold: 0.15 }
-      );
-      if (el.value) io.observe(el.value);
-    });
-
-    onBeforeUnmount(() => io?.disconnect());
-
-    return () =>
-      h(
-        "div",
-        {
-          ref: el,
-        },
-        [
-          h(
-            // Motion 组件：用 initial + animate
-            Motion as any,
-            {
-              initial: { opacity: 0, y: 16 },
-              animate: animateProps.value,
-            },
-            slots
-          )
-        ]
-      );
-  },
-});
-
-// 肿瘤分割系统功能特性
+// 道路缺陷检测系统功能特性
 const features = [
-  { title: "智能分割", desc: "基于YOLO模型的高精度肿瘤分割。" },
-  { title: "实时分析", desc: "快速处理医学影像并生成分析报告。" },
-  { title: "数据统计", desc: "完整的分割历史记录与统计分析。" },
-  { title: "模型管理", desc: "灵活的模型配置与性能监控。" },
-  { title: "可视化结果", desc: "直观的分割掩码与叠加图像展示。" },
-  { title: "诊断辅助", desc: "提供肿瘤面积比例等关键指标。" },
+  { title: "智能检测", desc: "利用先进的深度学习算法，精准识别各类道路缺陷。" },
+  { title: "实时分析", desc: "快速处理上传的道路图像，即时生成详细分析报告。" },
+  { title: "数据统计", desc: "提供全面的检测历史记录和多维度统计分析，辅助决策。" },
+  { title: "模型管理", desc: "灵活配置和优化检测模型，确保系统性能始终处于最佳状态。" },
+  { title: "可视化结果", desc: "直观展示缺陷标注和叠加图像，便于用户快速理解检测结果。" },
+  { title: "辅助决策", desc: "提供缺陷类型、位置、严重程度等关键指标，为道路养护提供科学依据。" },
 ];
 </script>
 

@@ -1,174 +1,232 @@
 <template>
-  <div class="min-h-screen bg-base-100 text-base-content p-6">
-    <!-- 页面标题 -->
-    <div class="mb-8">
-      <RevealMotion :delay="0">
-        <h1 class="text-3xl font-bold mb-2">分割历史记录</h1>
-        <p class="text-base-content/70">查看您的肝肿瘤分割历史记录和结果</p>
-      </RevealMotion>
-    </div>
-
-    <!-- 筛选器 -->
-    <RevealMotion :delay="0.1">
-      <div class="card bg-base-200 shadow-sm mb-6">
-        <div class="card-body p-4">
-          <div class="flex flex-wrap gap-4 items-end">
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text">患者ID</span>
-              </label>
-              <input 
-                v-model="filters.patient_id" 
-                type="text" 
-                placeholder="输入患者ID" 
-                class="input input-bordered input-sm w-full max-w-xs"
-              />
+  <div class="min-h-screen bg-base-100 p-4">
+    <!-- 页面头部 -->
+    <RevealMotion>
+      <div class="bg-base-200/80 backdrop-blur-sm rounded-3xl shadow-xl border border-base-300 p-8 mb-8">
+        <div class="text-center">
+          <h1 class="text-4xl font-bold text-primary mb-4">
+            🛣️ 道路缺陷检测历史
+          </h1>
+          <p class="text-xl text-base-content/70">智能分析记录 · 精准缺陷追踪</p>
+          <div class="flex justify-center items-center mt-6 space-x-8">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-primary">{{ historyData?.pagination?.total_count || 0 }}</div>
+              <div class="text-sm text-base-content/60">总检测次数</div>
             </div>
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text">开始日期</span>
-              </label>
-              <input 
-                v-model="filters.start_date" 
-                type="date" 
-                class="input input-bordered input-sm w-full max-w-xs"
-              />
+            <div class="w-px h-8 bg-base-300"></div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-success">{{ getSuccessRate() }}%</div>
+              <div class="text-sm text-base-content/60">检测成功率</div>
             </div>
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text">结束日期</span>
-              </label>
-              <input 
-                v-model="filters.end_date" 
-                type="date" 
-                class="input input-bordered input-sm w-full max-w-xs"
-              />
-            </div>
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text">每页显示</span>
-              </label>
-              <select v-model="filters.page_size" class="select select-bordered select-sm w-full max-w-xs">
-                <option value="10">10条</option>
-                <option value="20">20条</option>
-                <option value="50">50条</option>
-              </select>
-            </div>
-            <div class="flex gap-2">
-              <button @click="loadHistory" class="btn btn-primary btn-sm" :disabled="loading">
-                <span v-if="loading" class="loading loading-spinner loading-xs"></span>
-                搜索
-              </button>
-              <button @click="resetFilters" class="btn btn-outline btn-sm">
-                重置
-              </button>
+            <div class="w-px h-8 bg-base-300"></div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-secondary">{{ getAverageConfidence() }}%</div>
+              <div class="text-sm text-base-content/60">平均置信度</div>
             </div>
           </div>
         </div>
       </div>
     </RevealMotion>
 
-    <!-- 历史记录列表 -->
-    <RevealMotion :delay="0.2">
-      <div class="card bg-base-200 shadow-sm">
-        <div class="card-body p-0">
-          <!-- 加载状态 -->
-          <div v-if="loading" class="flex justify-center items-center py-12">
-            <span class="loading loading-spinner loading-lg"></span>
-          </div>
-
-          <!-- 空状态 -->
-          <div v-else-if="!historyData?.records?.length" class="text-center py-12">
-            <div class="text-6xl mb-4">📋</div>
-            <h3 class="text-lg font-semibold mb-2">暂无历史记录</h3>
-            <p class="text-base-content/70">还没有进行过肿瘤分割，快去体验一下吧！</p>
-          </div>
-
-          <!-- 记录表格 -->
-          <div v-else class="overflow-x-auto">
-            <table class="table table-zebra">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>患者ID</th>
-                  <th>置信度</th>
-                  <th>肿瘤面积</th>
-                  <th>总面积</th>
-                  <th>肿瘤比例</th>
-                  <th>分割时间</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr 
-                  v-for="record in historyData.records" 
-                  :key="record.id"
-                  class="hover:bg-base-300 cursor-pointer transition-colors"
-                  @click="showDetail(record)"
-                >
-                  <td class="font-mono">{{ record.id }}</td>
-                  <td>{{ record.patient_id || '未指定' }}</td>
-                  <td>
-                    <div class="badge badge-success">{{ (record.confidence * 100).toFixed(1) }}%</div>
-                  </td>
-                  <td>{{ record.tumor_area.toLocaleString() }} px²</td>
-                  <td>{{ record.total_area.toLocaleString() }} px²</td>
-                  <td>
-                    <div class="flex items-center gap-2">
-                      <div class="w-16 bg-base-300 rounded-full h-2">
-                        <div 
-                          class="bg-primary h-2 rounded-full transition-all"
-                          :style="{ width: `${(record.tumor_ratio * 100).toFixed(1)}%` }"
-                        ></div>
-                      </div>
-                      <span class="text-xs">{{ (record.tumor_ratio * 100).toFixed(2) }}%</span>
-                    </div>
-                  </td>
-                  <td>{{ formatDate(record.segmentation_time) }}</td>
-                  <td>
-                    <button 
-                      @click.stop="showDetail(record)" 
-                      class="btn btn-ghost btn-xs"
-                    >
-                      查看详情
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- 分页 -->
-          <div v-if="historyData?.pagination" class="flex justify-between items-center p-4 border-t border-base-300">
-            <div class="text-sm text-base-content/70">
-              共 {{ historyData.pagination.total_count }} 条记录，
-              第 {{ historyData.pagination.current_page }} / {{ historyData.pagination.total_pages }} 页
+    <!-- 搜索和筛选区域 -->
+    <RevealMotion :delay="0.1">
+      <div class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-base-300 p-6 mb-8">
+        <div class="flex flex-col lg:flex-row gap-4">
+          <!-- 搜索框 -->
+          <div class="flex-1">
+            <div class="relative">
+              <input 
+                v-model="searchQuery"
+                type="text" 
+                placeholder="搜索检测记录..."
+                class="input input-bordered w-full pl-12 pr-4 py-3 bg-base-100 border border-base-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                @input="handleSearch"
+              />
+              <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-base-content/50">
+                🔍
+              </div>
             </div>
-            <div class="join">
+          </div>
+          
+          <!-- 筛选器 -->
+          <div class="flex flex-wrap gap-3">
+            <select v-model="filters.page_size" class="select select-bordered px-4 py-3 bg-base-100 border border-base-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+              <option value="12">12条/页</option>
+              <option value="24">24条/页</option>
+              <option value="48">48条/页</option>
+            </select>
+            
+            <input 
+              v-model="filters.start_date" 
+              type="date" 
+              class="input input-bordered px-4 py-3 bg-base-100 border border-base-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+            
+            <input 
+              v-model="filters.end_date" 
+              type="date" 
+              class="input input-bordered px-4 py-3 bg-base-100 border border-base-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+            
+            <button 
+              @click="loadHistory" 
+              :disabled="loading"
+              class="btn btn-primary px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50"
+            >
+              <span v-if="loading" class="animate-spin mr-2">⚡</span>
+              {{ loading ? '搜索中...' : '🔍 搜索' }}
+            </button>
+            
+            <button 
+              @click="resetFilters" 
+              class="btn btn-ghost px-6 py-3 rounded-xl font-medium transition-all duration-300"
+            >
+              🔄 重置
+            </button>
+          </div>
+        </div>
+      </div>
+    </RevealMotion>
+
+    <!-- 记录网格 -->
+    <RevealMotion :delay="0.2">
+      <!-- 加载状态 -->
+      <div v-if="loading" class="flex justify-center items-center py-20">
+        <div class="text-center">
+          <div class="text-6xl mb-4 animate-bounce">🔄</div>
+          <div class="text-xl font-medium text-base-content/70">正在加载检测记录...</div>
+        </div>
+      </div>
+
+      <!-- 空状态 -->
+      <div v-else-if="!historyData?.records?.length" class="text-center py-20">
+        <div class="bg-base-200/80 backdrop-blur-sm rounded-3xl shadow-xl border border-base-300 p-12">
+          <div class="text-8xl mb-6">🛣️</div>
+          <h3 class="text-2xl font-bold text-base-content mb-4">暂无检测记录</h3>
+          <p class="text-base-content/70 text-lg mb-8">还没有进行过道路缺陷检测，快去体验一下吧！</p>
+          <button 
+            @click="$router.push('/user/segmentation')"
+            class="btn btn-primary px-8 py-4 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            🚀 开始检测
+          </button>
+        </div>
+      </div>
+
+      <!-- 记录卡片网格 -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div 
+          v-for="(record, index) in historyData.records" 
+          :key="record.id"
+          class="card bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-base-300 overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer group"
+          @click="showDetail(record)"
+        >
+          <!-- 卡片头部图片 -->
+          <div class="relative h-48 overflow-hidden">
+            <img 
+              :src="getImageUrl(record.original_image)"
+              :alt="`检测记录 ${record.id}`"
+              class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              @error="handleImageError"
+              @load="handleImageLoad"
+            />
+            <div class="absolute top-3 right-3 bg-black/70 text-white text-xs px-3 py-1 rounded-full">
+              #{{ record.id }}
+            </div>
+            <div class="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs px-3 py-1 rounded-full font-medium">
+              {{ (record.confidence * 100).toFixed(1) }}% 置信度
+            </div>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="absolute bottom-3 left-3 right-3 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div class="text-sm font-medium">点击查看详情</div>
+            </div>
+          </div>
+          
+          <!-- 卡片内容 -->
+          <div class="p-5">
+            <div class="space-y-3">
+              <!-- 缺陷比例进度条 -->
+              <div>
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-sm font-medium text-gray-700">缺陷比例</span>
+                  <span class="text-sm font-bold text-orange-600">{{ (record.tumor_ratio * 100).toFixed(2) }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    class="bg-gradient-to-r from-orange-400 to-red-500 h-2 rounded-full transition-all duration-500"
+                    :style="{ width: `${(record.tumor_ratio * 100).toFixed(1)}%` }"
+                  ></div>
+                </div>
+              </div>
+              
+              <!-- 统计信息 -->
+              <div class="grid grid-cols-2 gap-3">
+                <div class="bg-primary/10 rounded-lg p-3 text-center">
+                  <div class="text-xs text-base-content/70 mb-1">缺陷面积</div>
+                  <div class="text-sm font-bold text-primary">{{ formatArea(record.tumor_area) }}</div>
+                </div>
+                <div class="bg-success/10 rounded-lg p-3 text-center">
+                  <div class="text-xs text-base-content/70 mb-1">总面积</div>
+                  <div class="text-sm font-bold text-success">{{ formatArea(record.total_area) }}</div>
+                </div>
+              </div>
+              
+              <!-- 时间信息 -->
+              <div class="flex items-center justify-between pt-2 border-t border-base-300">
+                <div class="flex items-center text-base-content/60 text-xs">
+                  <span class="mr-1">🕒</span>
+                  {{ formatDate(record.segmentation_time) }}
+                </div>
+                <div class="text-xs text-base-content/50">
+                  {{ record.patient_id || '未指定ID' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分页器 -->
+      <div v-if="historyData?.pagination && historyData.pagination.total_pages > 1" class="mt-12">
+        <div class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-base-300 p-6">
+          <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-base-content/70">
+              显示第 {{ (historyData.pagination.current_page - 1) * (filters.page_size || 12) + 1 }} - 
+              {{ Math.min(historyData.pagination.current_page * (filters.page_size || 12), historyData.pagination.total_count) }} 条，
+              共 {{ historyData.pagination.total_count }} 条记录
+            </div>
+            
+            <div class="flex items-center space-x-2">
               <button 
                 @click="changePage(historyData.pagination.current_page - 1)"
                 :disabled="!historyData.pagination.has_previous"
-                class="join-item btn btn-sm"
+                class="btn btn-outline btn-sm px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all"
               >
-                上一页
+                ← 上一页
               </button>
-              <button 
-                v-for="page in getPageNumbers()"
-                :key="page"
-                @click="changePage(page)"
-                :class="[
-                  'join-item btn btn-sm',
-                  page === historyData.pagination.current_page ? 'btn-active' : ''
-                ]"
-              >
-                {{ page }}
-              </button>
+              
+              <div class="flex space-x-1">
+                <button 
+                  v-for="page in getPageNumbers()"
+                  :key="page"
+                  @click="changePage(page)"
+                  :class="[
+                    'btn btn-sm px-3 py-2 rounded-lg transition-all',
+                    page === historyData.pagination.current_page 
+                      ? 'btn-primary shadow-lg' 
+                      : 'btn-outline'
+                  ]"
+                >
+                  {{ page }}
+                </button>
+              </div>
+              
               <button 
                 @click="changePage(historyData.pagination.current_page + 1)"
                 :disabled="!historyData.pagination.has_next"
-                class="join-item btn btn-sm"
+                class="btn btn-outline btn-sm px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all"
               >
-                下一页
+                下一页 →
               </button>
             </div>
           </div>
@@ -178,139 +236,206 @@
 
     <!-- 详情模态框 -->
     <dialog ref="detailModal" class="modal">
-      <div class="modal-box max-w-4xl">
+      <div class="modal-box max-w-6xl bg-base-100/95 backdrop-blur-sm border border-base-300">
         <form method="dialog">
-          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+          <button class="btn btn-sm btn-circle btn-ghost absolute right-4 top-4">✕</button>
         </form>
         
-        <h3 class="font-bold text-lg mb-4">分割详情 - ID: {{ selectedRecord?.id }}</h3>
+        <div class="mb-6">
+          <h3 class="text-2xl font-bold text-primary mb-2">
+            🛣️ 检测详情 - #{{ selectedRecord?.id }}
+          </h3>
+          <p class="text-base-content/70">道路缺陷检测结果详细信息</p>
+        </div>
         
-        <div v-if="selectedRecord" class="space-y-6">
-          <!-- 基本信息 -->
+        <div v-if="selectedRecord" class="space-y-8">
+          <!-- 统计卡片 -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="stat bg-base-200 rounded-lg">
-              <div class="stat-title">置信度</div>
-              <div class="stat-value text-success">{{ (selectedRecord.confidence * 100).toFixed(1) }}%</div>
+            <div class="bg-success/10 rounded-2xl p-4 border border-success/20">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-success text-2xl">🎯</span>
+                <span class="text-xs text-success bg-success/20 px-2 py-1 rounded-full">置信度</span>
+              </div>
+              <div class="text-2xl font-bold text-success">{{ (selectedRecord.confidence * 100).toFixed(1) }}%</div>
+              <div class="text-xs text-success mt-1">检测准确性</div>
             </div>
-            <div class="stat bg-base-200 rounded-lg">
-              <div class="stat-title">肿瘤面积</div>
-              <div class="stat-value text-sm">{{ selectedRecord.tumor_area.toLocaleString() }}</div>
-              <div class="stat-desc">px²</div>
+            
+            <div class="bg-warning/10 rounded-2xl p-4 border border-warning/20">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-warning text-2xl">⚠️</span>
+                <span class="text-xs text-warning bg-warning/20 px-2 py-1 rounded-full">缺陷面积</span>
+              </div>
+              <div class="text-lg font-bold text-warning">{{ formatArea(selectedRecord.tumor_area) }}</div>
+              <div class="text-xs text-warning mt-1">像素平方</div>
             </div>
-            <div class="stat bg-base-200 rounded-lg">
-              <div class="stat-title">总面积</div>
-              <div class="stat-value text-sm">{{ selectedRecord.total_area.toLocaleString() }}</div>
-              <div class="stat-desc">px²</div>
+            
+            <div class="bg-info/10 rounded-2xl p-4 border border-info/20">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-info text-2xl">📐</span>
+                <span class="text-xs text-info bg-info/20 px-2 py-1 rounded-full">总面积</span>
+              </div>
+              <div class="text-lg font-bold text-info">{{ formatArea(selectedRecord.total_area) }}</div>
+              <div class="text-xs text-info mt-1">像素平方</div>
             </div>
-            <div class="stat bg-base-200 rounded-lg">
-              <div class="stat-title">肿瘤比例</div>
-              <div class="stat-value text-warning">{{ (selectedRecord.tumor_ratio * 100).toFixed(2) }}%</div>
+            
+            <div class="bg-secondary/10 rounded-2xl p-4 border border-secondary/20">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-secondary text-2xl">📊</span>
+                <span class="text-xs text-secondary bg-secondary/20 px-2 py-1 rounded-full">缺陷比例</span>
+              </div>
+              <div class="text-lg font-bold text-secondary">{{ (selectedRecord.tumor_ratio * 100).toFixed(2) }}%</div>
+              <div class="text-xs text-secondary mt-1">占总面积</div>
             </div>
           </div>
 
           <!-- 图片展示 -->
-          <div class="space-y-4">
-            <h4 class="text-lg font-semibold">分割结果图像</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="space-y-6">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">🖼️</span>
+              <h4 class="text-xl font-bold text-base-content">检测结果图像</h4>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <!-- 原始图像 -->
-              <div class="space-y-2">
-                <h5 class="font-medium">原始图像</h5>
+              <div class="bg-base-100/80 rounded-2xl p-4 shadow-lg border border-base-300">
+                <h5 class="font-semibold text-base-content mb-3 flex items-center gap-2">
+                  <span class="text-primary">📷</span>
+                  原始道路图像
+                </h5>
                 <div class="relative group">
-                  <!-- 加载指示器 -->
-                  <div class="absolute inset-0 bg-base-200 rounded-lg flex items-center justify-center z-10">
-                    <span class="loading loading-spinner loading-md"></span>
+                  <div class="absolute inset-0 bg-base-200 rounded-xl flex items-center justify-center z-10">
+                    <div class="animate-spin text-2xl">⚡</div>
                   </div>
                   <img 
                     :src="getImageUrl(selectedRecord.original_image)"
                     :data-original-path="selectedRecord.original_image"
-                    alt="原始图像"
-                    class="w-full h-48 object-cover rounded-lg border border-base-300 cursor-pointer hover:opacity-80 transition-opacity relative z-20"
+                    alt="原始道路图像"
+                    class="w-full h-56 object-cover rounded-xl border border-base-300 cursor-pointer hover:scale-105 transition-all duration-300 relative z-20 shadow-md"
                     style="opacity: 0; transition: opacity 0.3s ease;"
-                    @click="showImageModal(getImageUrl(selectedRecord.original_image), '原始图像', $event)"
+                    @click="showImageModal(getImageUrl(selectedRecord.original_image), '原始道路图像', $event)"
                     @error="handleImageError"
                     @load="handleImageLoad"
                     loading="lazy"
                   />
-                  <div class="absolute inset-0  bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center z-30 pointer-events-none">
-                    <span class="text-white opacity-0 group-hover:opacity-100 transition-opacity">点击放大</span>
+                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all rounded-xl flex items-center justify-center z-30 pointer-events-none">
+                    <span class="text-white opacity-0 group-hover:opacity-100 transition-opacity font-medium">🔍 点击放大</span>
                   </div>
                 </div>
               </div>
 
-              <!-- 分割掩码 -->
-              <div class="space-y-2">
-                <h5 class="font-medium">分割掩码</h5>
+              <!-- 检测掩码 -->
+              <div class="bg-white/80 rounded-2xl p-4 shadow-lg border border-white/20">
+                <h5 class="font-semibold text-base-content mb-3 flex items-center gap-2">
+                  <span class="text-success">🎭</span>
+                  缺陷检测掩码
+                </h5>
                 <div class="relative group">
-                  <!-- 加载指示器 -->
-                  <div class="absolute inset-0 bg-base-200 rounded-lg flex items-center justify-center z-10">
-                    <span class="loading loading-spinner loading-md"></span>
+                  <div class="absolute inset-0 bg-gray-100 rounded-xl flex items-center justify-center z-10">
+                    <div class="animate-spin text-2xl">⚡</div>
                   </div>
                   <img 
                     :src="getImageUrl(selectedRecord.mask_image)"
                     :data-original-path="selectedRecord.mask_image"
-                    alt="分割掩码"
-                    class="w-full h-48 object-cover rounded-lg border border-base-300 cursor-pointer hover:opacity-80 transition-opacity relative z-20"
+                    alt="缺陷检测掩码"
+                    class="w-full h-56 object-cover rounded-xl border border-gray-200 cursor-pointer hover:scale-105 transition-all duration-300 relative z-20 shadow-md"
                     style="opacity: 0; transition: opacity 0.3s ease;"
-                    @click="showImageModal(getImageUrl(selectedRecord.mask_image), '分割掩码', $event)"
+                    @click="showImageModal(getImageUrl(selectedRecord.mask_image), '缺陷检测掩码', $event)"
                     @error="handleImageError"
                     @load="handleImageLoad"
                     loading="lazy"
                   />
-                  <div class="absolute inset-0  bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center z-30 pointer-events-none">
-                    <span class="text-white opacity-0 group-hover:opacity-100 transition-opacity">点击放大</span>
+                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all rounded-xl flex items-center justify-center z-30 pointer-events-none">
+                    <span class="text-white opacity-0 group-hover:opacity-100 transition-opacity font-medium">🔍 点击放大</span>
                   </div>
                 </div>
               </div>
 
               <!-- 叠加结果 -->
-              <div class="space-y-2">
-                <h5 class="font-medium">叠加结果</h5>
+              <div class="bg-white/80 rounded-2xl p-4 shadow-lg border border-white/20">
+                <h5 class="font-semibold text-base-content mb-3 flex items-center gap-2">
+                  <span class="text-secondary">🔗</span>
+                  叠加检测结果
+                </h5>
                 <div class="relative group">
-                  <!-- 加载指示器 -->
-                  <div class="absolute inset-0 bg-base-200 rounded-lg flex items-center justify-center z-10">
-                    <span class="loading loading-spinner loading-md"></span>
+                  <div class="absolute inset-0 bg-gray-100 rounded-xl flex items-center justify-center z-10">
+                    <div class="animate-spin text-2xl">⚡</div>
                   </div>
                   <img 
                     :src="getImageUrl(selectedRecord.overlay_image)"
                     :data-original-path="selectedRecord.overlay_image"
-                    alt="叠加结果"
-                    class="w-full h-48 object-cover rounded-lg border border-base-300 cursor-pointer hover:opacity-80 transition-opacity relative z-20"
+                    alt="叠加检测结果"
+                    class="w-full h-56 object-cover rounded-xl border border-gray-200 cursor-pointer hover:scale-105 transition-all duration-300 relative z-20 shadow-md"
                     style="opacity: 0; transition: opacity 0.3s ease;"
-                    @click="showImageModal(getImageUrl(selectedRecord.overlay_image), '叠加结果', $event)"
+                    @click="showImageModal(getImageUrl(selectedRecord.overlay_image), '叠加检测结果', $event)"
                     @error="handleImageError"
                     @load="handleImageLoad"
                     loading="lazy"
                   />
-                  <div class="absolute inset-0 bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center z-30 pointer-events-none">
-                    <span class="text-white opacity-0 group-hover:opacity-100 transition-opacity">点击放大</span>
+                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all rounded-xl flex items-center justify-center z-30 pointer-events-none">
+                    <span class="text-white opacity-0 group-hover:opacity-100 transition-opacity font-medium">🔍 点击放大</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 其他信息 -->
-          <div class="space-y-2">
-            <h4 class="text-lg font-semibold">其他信息</h4>
-            <div class="bg-base-200 rounded-lg p-4 space-y-2">
-              <div><strong>患者ID:</strong> {{ selectedRecord.patient_id || '未指定' }}</div>
-              <div><strong>会话ID:</strong> <code class="text-xs">{{ selectedRecord.session_id }}</code></div>
-              <div><strong>分割时间:</strong> {{ formatDate(selectedRecord.segmentation_time) }}</div>
-              <div v-if="selectedRecord.diagnosis_notes">
-                <strong>诊断备注:</strong> {{ selectedRecord.diagnosis_notes }}
+          <!-- 详细信息 -->
+          <div class="bg-base-200/50 rounded-2xl p-6 border border-base-300">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="text-2xl">📋</span>
+              <h4 class="text-xl font-bold text-base-content">检测信息</h4>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="space-y-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-primary">🆔</span>
+                  <span class="font-medium text-base-content">检测ID:</span>
+                  <span class="text-base-content/70">{{ selectedRecord.patient_id || '未指定' }}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-success">🔗</span>
+                  <span class="font-medium text-base-content">会话ID:</span>
+                  <code class="text-xs bg-base-200 px-2 py-1 rounded text-base-content/70">{{ selectedRecord.session_id }}</code>
+                </div>
+              </div>
+              
+              <div class="space-y-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-secondary">🕒</span>
+                  <span class="font-medium text-base-content">检测时间:</span>
+                  <span class="text-base-content/70">{{ formatDate(selectedRecord.segmentation_time) }}</span>
+                </div>
+                <div v-if="selectedRecord.diagnosis_notes" class="flex items-start gap-3">
+                  <span class="text-warning">📝</span>
+                  <span class="font-medium text-base-content">备注:</span>
+                  <span class="text-base-content/70">{{ selectedRecord.diagnosis_notes }}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- 下载按钮 -->
-          <div class="flex gap-2 pt-4">
-            <button @click="downloadImage(getImageUrl(selectedRecord.original_image), '原始图像')" class="btn btn-outline btn-sm">
+          <!-- 操作按钮 -->
+          <div class="flex flex-wrap gap-3 pt-4 border-t border-base-300">
+            <button 
+              @click="downloadImage(getImageUrl(selectedRecord.original_image), '原始道路图像')" 
+              class="btn btn-primary px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
+            >
+              <span>📷</span>
               下载原始图像
             </button>
-            <button @click="downloadImage(getImageUrl(selectedRecord.mask_image), '分割掩码')" class="btn btn-outline btn-sm">
-              下载分割掩码
+            <button 
+              @click="downloadImage(getImageUrl(selectedRecord.mask_image), '缺陷检测掩码')" 
+              class="btn btn-success px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
+            >
+              <span>🎭</span>
+              下载检测掩码
             </button>
-            <button @click="downloadImage(getImageUrl(selectedRecord.overlay_image), '叠加结果')" class="btn btn-outline btn-sm">
+            <button 
+              @click="downloadImage(getImageUrl(selectedRecord.overlay_image), '叠加检测结果')" 
+              class="btn btn-secondary px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
+            >
+              <span>🔗</span>
               下载叠加结果
             </button>
           </div>
@@ -323,27 +448,28 @@
 
     <!-- 图片放大模态框 -->
     <dialog ref="imageModal" class="modal">
-      <div class="modal-box max-w-5xl">
+      <div class="modal-box max-w-5xl bg-base-100/95 backdrop-blur-sm border border-base-300">
         <form method="dialog">
-          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 text-base-content/60 hover:text-base-content">✕</button>
         </form>
         
-        <h3 class="font-bold text-lg mb-4">{{ currentImageTitle }}</h3>
+        <h3 class="font-bold text-lg mb-4 text-base-content">{{ currentImageTitle }}</h3>
         
-        <div class="flex justify-center">
+        <div class="flex justify-center bg-base-200 rounded-xl p-4">
           <img 
             :src="currentImageUrl"
             :data-original-path="currentImageUrl"
             :alt="currentImageTitle"
-            class="max-w-full max-h-[70vh] object-contain rounded-lg"
+            class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg border border-base-300"
             style="opacity: 0; transition: opacity 0.3s ease;"
             @error="handleImageError"
             @load="handleImageLoad"
           />
         </div>
         
-        <div class="flex justify-center mt-4">
-          <button @click="downloadImage(currentImageUrl, currentImageTitle)" class="btn btn-primary btn-sm">
+        <div class="flex justify-center mt-4 pt-4 border-t border-base-300">
+          <button @click="downloadImage(currentImageUrl, currentImageTitle)" class="btn btn-primary px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2">
+            <span>📥</span>
             下载图片
           </button>
         </div>
@@ -664,6 +790,33 @@ const downloadImage = async (url: string, filename: string) => {
   }
 }
 
+// 格式化面积数值
+const formatArea = (area: number) => {
+  if (!area) return '0'
+  return area.toLocaleString()
+}
+
+// 计算成功率
+const getSuccessRate = () => {
+  if (!historyData.value?.records?.length) return 0
+  return 100 // 假设所有检测都成功
+}
+
+// 计算平均置信度
+const getAverageConfidence = () => {
+  if (!historyData.value?.records?.length) return 0
+  const total = historyData.value.records.reduce((sum, record) => sum + (record.confidence * 100), 0)
+  return Math.round(total / historyData.value.records.length)
+}
+
+// 搜索处理
+const searchQuery = ref('')
+const handleSearch = () => {
+  filters.value.patient_id = searchQuery.value
+  filters.value.page = 1
+  loadHistory()
+}
+
 // 格式化日期
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
@@ -707,5 +860,25 @@ onMounted(() => {
 
 .stat-desc {
   @apply text-xs text-base-content/70;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--b2));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--p));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--pf));
 }
 </style>
